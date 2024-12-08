@@ -70,4 +70,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/scala-2.13
-          publish_branch: main
