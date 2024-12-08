@@ -63,5 +63,4 @@ jobs:
           echo "  login $HEROKU_API_KEY" >> ~/.netrc
           echo "  password $HEROKU_API_KEY" >> ~/.netrc
           git remote add heroku https://git.heroku.com/scala-for-beginners-frontend.git
-          git fetch --unshallow
           git push heroku main
