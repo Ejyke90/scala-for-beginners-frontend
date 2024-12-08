@@ -1,9 +1,9 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches:
-      - '*' # Push events to all branches
+      - main
   pull_request:
     branches:
       - main
@@ -35,3 +35,24 @@ jobs:
 
       - name: Build with sbt
         run: sbt clean compile
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Deploy to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          git remote add heroku https://git.heroku.com/scala-for-beginners-frontend.git
+          git push heroku main
