@@ -21,21 +21,21 @@ Render a sign-in page inline when authentication is needed
 Maintain the Entra ID session in the HTML and prepopulate the email
 Close the HTML window when sign-in is completed
 
-Yes, this can be done. The pattern is an embedded auth flow (similar to how desktop apps handle OAuth) — keeping the user inside RBC Assist while still going through Entra ID (Microsoft's identity platform) properly.
+Yes, this can be done. The pattern is an embedded auth flow (similar to how desktop apps handle OAuth) — keeping the user inside AI Assist while still going through Entra ID (Microsoft's identity platform) properly.
 
 Here's the implementation prompt first, then the explanation:
 
 Scope tags
 orchestrator agent auth subagent security Entra ID / MSAL session management
 Context & goal
-You are implementing a user story for RBC Assist, an AI agent interface (similar to image 1 — a chat UI with MCP tool access to Gmail, Calendar, etc.).
+You are implementing a user story for AI Assist, an AI agent interface (similar to image 1 — a chat UI with MCP tool access to Gmail, Calendar, etc.).
 
-GOAL: Users must never leave the RBC Assist UI to authenticate. When a tool call fails with a 401/403 or when an MCP server signals token expiry, the agent MUST render an inline sign-in panel, collect credentials through Microsoft Entra ID (Azure AD), and resume the interrupted flow — all without a full page redirect.
+GOAL: Users must never leave the AI Assist UI to authenticate. When a tool call fails with a 401/403 or when an MCP server signals token expiry, the agent MUST render an inline sign-in panel, collect credentials through Microsoft Entra ID (Azure AD), and resume the interrupted flow — all without a full page redirect.
 
 
 Acceptance criteria to implement
 AC-1  INLINE SIGN-IN PANEL
-  - When auth is needed, render a modal/panel INSIDE the RBC Assist chat frame
+  - When auth is needed, render a modal/panel INSIDE the AI Assist chat frame
   - Never do a top-level window.location redirect
   - Prepopulate the email field from the existing Entra session (UPN hint)
   - Use MSAL.js popup flow (loginPopup) NOT redirect flow (loginRedirect)
@@ -94,14 +94,14 @@ UI implementation instructions
 
 INLINE SIGN-IN PANEL:
   - Render as a floating card inside the chat thread (not a browser dialog)
-  - Show: RBC logo, "Sign in to continue" heading, prepopulated email (read-only), "Sign in with Microsoft" button
+  - Show: AI logo, "Sign in to continue" heading, prepopulated email (read-only), "Sign in with Microsoft" button
   - While popup is open: show a spinner with "Waiting for sign-in..." state
   - On success: animate the panel out, inject "Signed in as {email}" system message
   - On cancel: show "Sign-in cancelled. Try again?" with a retry button
 
 POPUP WINDOW:
   - MSAL loginPopup opens a real browser popup to the Entra ID endpoint
-  - This is intentional — it keeps credentials on Microsoft's domain (never handled by RBC Assist)
+  - This is intentional — it keeps credentials on Microsoft's domain (never handled by AI Assist)
   - The popup closes automatically when MSAL resolves the promise
   - Detect popup blockers: if window.open returns null, show the fallback inline link
 
@@ -127,13 +127,13 @@ Security checklist for code review
 
 
 How this works
-The core insight is that you should never do a full-page redirect — instead you use MSAL.js's loginPopup() which opens a small Microsoft-hosted browser popup, gets the credential, and hands back a token to your app. The user never leaves RBC Assist.
+The core insight is that you should never do a full-page redirect — instead you use MSAL.js's loginPopup() which opens a small Microsoft-hosted browser popup, gets the credential, and hands back a token to your app. The user never leaves AI Assist.
 The flow in 5 steps:
 
 Agent intercepts a 401 — The orchestrator agent catches the auth failure from the MCP tool call (Gmail, Calendar, etc.) and pauses that turn, storing the original user intent.
 Inline panel appears — A floating card renders inside the chat with the user's email already filled in (pulled from the existing Entra session via account.username). They just click "Sign in with Microsoft."
-Popup handles credentials — loginPopup() opens a Microsoft-owned popup window. The user's credentials are entered on Microsoft's domain — RBC Assist never touches them. PKCE + state + nonce ensure the exchange is tamper-proof.
+Popup handles credentials — loginPopup() opens a Microsoft-owned popup window. The user's credentials are entered on Microsoft's domain — AI Assist never touches them. PKCE + state + nonce ensure the exchange is tamper-proof.
 Token returned, popup closes — MSAL resolves the promise with a fresh access token. The inline panel dismisses. The token is injected into the pending MCP call and it retries automatically.
-User sees a seamless resume — A "Signed in as you@rbc.com" system message appears, and the original response continues as if nothing happened.
+User sees a seamless resume — A "Signed in as you@AI.com" system message appears, and the original response continues as if nothing happened.
 
-Why security is handled safely: Credentials never pass through RBC Assist's code — they go directly Microsoft → user's popup → Microsoft. The token itself lives only in memory (never localStorage). Refresh tokens are kept server-side only via a Backend-for-Frontend (BFF) pattern. Every token request uses PKCE so an intercepted auth code is useless without the matching verifier.
+Why security is handled safely: Credentials never pass through AI Assist's code — they go directly Microsoft → user's popup → Microsoft. The token itself lives only in memory (never localStorage). Refresh tokens are kept server-side only via a Backend-for-Frontend (BFF) pattern. Every token request uses PKCE so an intercepted auth code is useless without the matching verifier.
